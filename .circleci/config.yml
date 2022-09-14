@@ -6,7 +6,6 @@ jobs:
   test:
     docker:
       - image: circleci/ruby:2.6-stretch
-      - image: hindsightsoftware/hotel-booking:latest
 
     steps:
       - checkout
@@ -25,12 +24,13 @@ jobs:
             if [[ "$TIMEOUT" -eq 0 ]]; then exit 1; fi
 
       - run:
-          name: Unit Tests
-          command: |
-            rake features
+            test:
+        override:
+            - mkdir -p $CIRCLE_TEST_REPORTS/cucumber
+            - bundle exec cucumber --format junit --out $CIRCLE_TEST_REPORTS/cucumber/junit.xml
 
 workflows:
-  version: 2
+  version: 2.1
   build_and_test:
     jobs:
       - test
