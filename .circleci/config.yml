@@ -2,35 +2,29 @@
 # See: https://circleci.com/docs/2.0/configuration-reference
 version: 2.1
 
-jobs:
-  test:
-    docker:
-      - image: circleci/ruby:2.6-stretch
+# Orbs are reusable packages of CircleCI configuration that you may share across projects, enabling you to create encapsulated, parameterized commands, jobs, and executors that can be used across multiple projects.
+# See: https://circleci.com/docs/2.0/orb-intro/
+orbs:
+  ruby: circleci/ruby@1.4.0
 
+# Define a job to be invoked later in a workflow.
+# See: https://circleci.com/docs/2.0/configuration-reference/#jobs
+jobs:
+  build:
+    docker:
+      - image: cimg/ruby:3.1.0
+    executor: ruby/default
     steps:
       - checkout
-
       - run:
-          name: Install Dependencies
-          command: |
-            gem install bundler
-            bundle install
+          name: Which bundler?
+          command: bundle -v
+      - ruby/bundle-install
 
-      - run:
-          name: Wait for Backend connection
-          command: |
-            TIMEOUT=6
-            until [ "$(curl --write-out %{http_code} --silent --output /dev/null http://localhost:8080/)" -eq 200 ] || [ $TIMEOUT -eq 0 ]; do echo "Waiting for port 8080, timeout: $((TIMEOUT--))"; sleep 10; done
-            if [[ "$TIMEOUT" -eq 0 ]]; then exit 1; fi
-
-      - run:
-            test:
-        override:
-            - mkdir -p $CIRCLE_TEST_REPORTS/cucumber
-            - bundle exec cucumber --format junit --out $CIRCLE_TEST_REPORTS/cucumber/junit.xml
-
+# Invoke jobs via workflows
+# See: https://circleci.com/docs/2.0/configuration-reference/#workflows
 workflows:
-  version: 2.1
-  build_and_test:
+  sample: # This is the name of the workflow, feel free to change it to better match your workflow.
+    # Inside the workflow, you define the jobs you want to run.
     jobs:
-      - test
+      - build
