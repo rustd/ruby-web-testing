@@ -2,25 +2,35 @@
 # See: https://circleci.com/docs/2.0/configuration-reference
 version: 2.1
 
-# Define a job to be invoked later in a workflow.
-# See: https://circleci.com/docs/2.0/configuration-reference/#jobs
 jobs:
-  say-hello:
-    # Specify the execution environment. You can specify an image from Dockerhub or use one of our Convenience Images from CircleCI's Developer Hub.
-    # See: https://circleci.com/docs/2.0/configuration-reference/#docker-machine-macos-windows-executor
+  test:
     docker:
-      - image: cimg/base:stable
-    # Add steps to the job
-    # See: https://circleci.com/docs/2.0/configuration-reference/#steps
+      - image: circleci/ruby:2.6-stretch
+      - image: hindsightsoftware/hotel-booking:latest
+
     steps:
       - checkout
-      - run:
-          name: "Say hello"
-          command: "echo Hello, World!"
 
-# Invoke jobs via workflows
-# See: https://circleci.com/docs/2.0/configuration-reference/#workflows
+      - run:
+          name: Install Dependencies
+          command: |
+            gem install bundler
+            bundle install
+
+      - run:
+          name: Wait for Backend connection
+          command: |
+            TIMEOUT=6
+            until [ "$(curl --write-out %{http_code} --silent --output /dev/null http://localhost:8080/)" -eq 200 ] || [ $TIMEOUT -eq 0 ]; do echo "Waiting for port 8080, timeout: $((TIMEOUT--))"; sleep 10; done
+            if [[ "$TIMEOUT" -eq 0 ]]; then exit 1; fi
+
+      - run:
+          name: Unit Tests
+          command: |
+            rake features
+
 workflows:
-  say-hello-workflow:
+  version: 2
+  build_and_test:
     jobs:
-      - say-hello
+      - test
